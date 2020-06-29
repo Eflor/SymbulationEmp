@@ -5,7 +5,9 @@
 #include "../../Empirical/source/data/DataFile.h"
 #include "../../Empirical/source/tools/random_utils.h"
 #include "../../Empirical/source/tools/Random.h"
-#include "SymOrg.h"
+//#include "SymOrg.h"
+#include "AvidaGPHost.h"
+#include "AvidaGPSymbio.h"
 #include <set>
 #include <math.h>
 
@@ -25,7 +27,7 @@ private:
   double synergy = 0;
   emp::Random random;
   
-  emp::Ptr<emp::DataMonitor<double, emp::data::Histogram>> data_node_hostintval; // New() reallocates this pointer
+  emp::Ptr<emp::DataMonitor<double, emp::data::Histogram>> data_node_hostintval;
   emp::Ptr<emp::DataMonitor<double, emp::data::Histogram>> data_node_symintval;
   emp::Ptr<emp::DataMonitor<int>> data_node_hostcount;
   emp::Ptr<emp::DataMonitor<int>> data_node_symcount;
@@ -126,6 +128,7 @@ public:
     file.AddHistBin(node, 17, "Hist_0.7", "Count for histogram bin 0.7 to <0.8");
     file.AddHistBin(node, 18, "Hist_0.8", "Count for histogram bin 0.8 to <0.9");
     file.AddHistBin(node, 19, "Hist_0.9", "Count for histogram bin 0.9 to 1.0");
+
 
     file.PrintHeaderKeys();
 
@@ -244,7 +247,7 @@ public:
         data_node_symintval->Reset();
         for (size_t i = 0; i< pop.size(); i++) {
           if (IsOccupied(i)) {
-	    emp::vector<Symbiont>& syms = pop[i]->GetSymbionts(); 
+	    emp::vector<Symbiont>& syms = pop[i]->GetSymbionts();
 	    int sym_size = syms.size();
 	    for(size_t j=0; j< sym_size; j++){
 	      data_node_symintval->AddDatum(syms[j].GetIntVal());
@@ -273,7 +276,7 @@ public:
       //Could put repro in Host process and population calls Symbiont process and places offspring as necessary?
       pop[i]->Process(random, resources_per_host_per_update, synergy);
   
-      //Check reproduction                                                                                                                         
+      //Check reproduction                                                                                                                              
       if (pop[i]->GetPoints() >= host_repro ) {  // if host has more points than required for repro                                                                                                   
         // will replicate & mutate a random offset from parent values
         // while resetting resource points for host and symbiont to zero                                             
@@ -295,7 +298,7 @@ public:
 
           } //end will transmit
         } //end for loop for each symbiont
-        DoBirth(*host_baby, i); //Automatically deals with grid
+        //DoBirth(*host_baby, i); //Automatically deals with grid
       }
 
       if (pop[i]->HasSym()) { //check each sym for horizontal transmission and lysis

@@ -1,8 +1,13 @@
 #include "../SymWorld.h"
+//#include "../SymOrg.h"
+#include "../AvidaGPHost.h"
+#include "../AvidaGPSymbio.h"
+#include "../../Empirical/source/hardware/AvidaGP.h"
 #include "../../Empirical/source/config/ArgManager.h"
+#include "../../Empirical/source/Evolve/World.h"
 #include <iostream>
+using std::endl; using std::cout;
 
-using namespace std;
 
 // This is the main function for the NATIVE version of this project.
 
@@ -27,8 +32,8 @@ EMP_BUILD_CONFIG(SymConfigBase,
     VALUE(SYM_HORIZ_TRANS_RES, double, 100, "How many resources required for symbiont non-lytic horizontal transmission"),
     VALUE(START_MOI, int, 1, "Ratio of symbionts to hosts that experiment should start with"),
     VALUE(GRID, bool, 0, "Do offspring get placed immediately next to parents on grid, same for symbiont spreading"),
-    VALUE(FILE_PATH, string, "", "Output file path"),
-    VALUE(FILE_NAME, string, "_data_", "Root output file name")
+    VALUE(FILE_PATH, std::string, "", "Output file path"),
+    VALUE(FILE_NAME, std::string, "_data_", "Root output file name")
 )
 
 int symbulation_main(int argc, char * argv[])
@@ -39,15 +44,15 @@ int symbulation_main(int argc, char * argv[])
 
   auto args = emp::cl::ArgManager(argc, argv);
   if (args.ProcessConfigOptions(config, std::cout, "SymSettings.cfg") == false) {
-    cerr << "There was a problem in processing the options file." << endl;
+    std::cerr << "There was a problem in processing the options file." << endl;
     exit(1);
   }
   if (args.TestUnknown() == false) {
-    cerr << "Leftover args no good." << endl;
+    std::cerr << "Leftover args no good." << endl;
     exit(1);
   }
   if (config.BURST_SIZE()%config.BURST_TIME() != 0 && config.BURST_SIZE() < 999999999) {
-  	cerr << "BURST_SIZE must be an integer multiple of BURST_TIME." << endl;
+  	std::cerr << "BURST_SIZE must be an integer multiple of BURST_TIME." << endl;
   	exit(1);
   }
 
@@ -85,45 +90,74 @@ int symbulation_main(int argc, char * argv[])
   const bool STAGGER_STARTING_BURST_TIMERS = true;
 
   //Set up files
-  //world.SetupPopulationFile().SetTimingRepeat(TIMING_REPEAT);
+  world.SetupPopulationFile().SetTimingRepeat(TIMING_REPEAT);
 
-  if (config.LYSIS() == 1) {
-    world.SetupLysisFile(config.FILE_PATH()+"Lysis"+config.FILE_NAME()+".data").SetTimingRepeat(TIMING_REPEAT);
-  }
   world.SetupHostIntValFile(config.FILE_PATH()+"HostVals"+config.FILE_NAME()+".data").SetTimingRepeat(TIMING_REPEAT);
   world.SetupSymIntValFile(config.FILE_PATH()+"SymVals"+config.FILE_NAME()+".data").SetTimingRepeat(TIMING_REPEAT);
 
+    // Setup the fitness function.
+  std::function<double(const Host &)> fit_fun =
+    [](const Host & org) {
+      int count = 0;
+      for (int i = 0; i < 16; i++) {
+        if (org.GetOutput(i) == (double) (i*i)) count++;
+      }
+      return (double) count;
+    };
+
+
   
-
   //inject organisms
-  for (size_t i = 0; i < POP_SIZE; i++){
-    Host *new_org;
-    if (random_phen_host) new_org = new Host(random.GetDouble(-1, 1));
-    else new_org = new Host(config.HOST_INT());
-    world.Inject(*new_org);
-  }
+  // for (size_t i = 0; i < POP_SIZE; i++){
+  //   Host *new_org;
+  //   if (random_phen_host) new_org = new Host(random.GetDouble(-1, 1));
+  //   else new_org = new Host(config.HOST_INT());
+  //       world.Inject(*new_org);
 
+  //   for (int j = 0; j < start_moi; j++){ 
+  //     Symbiont new_sym; 
+  //     if(random_phen_sym) new_sym = *(new Symbiont(random.GetDouble(-1, 1)));
+  //     else new_sym = *(new Symbiont(config.SYM_INT()));
+  //     if(STAGGER_STARTING_BURST_TIMERS)
+  //       new_sym.burst_timer = random.GetInt(-5,5);
+  //     world.InjectSymbiont(new_sym);
+  //   }
+  // }
 
-  //This loop must be outside of the host generation loop since otherwise
-  //syms try to inject into mostly empty spots at first
-  int total_syms = POP_SIZE * start_moi;
-  for (int j = 0; j < total_syms; j++){ 
-      Symbiont new_sym; 
-      if(random_phen_sym) new_sym = *(new Symbiont(random.GetDouble(-1, 1)));
-      else new_sym = *(new Symbiont(config.SYM_INT()));
-      if(STAGGER_STARTING_BURST_TIMERS)
-        new_sym.burst_timer = random.GetInt(-5,5);
-      world.InjectSymbiont(new_sym);
-    }
 
   //Loop through updates
   for (int i = 0; i < numupdates; i++) {
-    if((i%TIMING_REPEAT)==0) {
-      cout <<"Update: "<< i << endl;
+    world.ResetHardware();
+    world.Process(random, 100, 5); // use to distribute amount of (int) to each organism in world
+    if((i%TIMING_REPEAT)) {
+      double fit0 = world.CalcFitnessID(0);
+      cout <<"Update: "<< i << ":" <<  fit0 << endl;
       cout.flush();
     }
+
+    // Keep the best individual.
+    EliteSelect(world, 1, 1);
+
+    // Run a tournament for the rest...
+    TournamentSelect(world, 5, POP_SIZE-1);
+    // LexicaseSelect(world, fit_set, POP_SIZE-1);
+    // EcoSelect(world, fit_fun, fit_set, 100, 5, POP_SIZE-1);
     world.Update();
+
+    // Mutate all but the first organism.
+    world.DoMutations(1);
   }
+
+  std::ostream oss(NULL);
+
+  std::cout << std::endl;
+  world[0].PrintGenome(oss);
+  std::cout << std::endl;
+  for (int i = 0; i < 16; i++) {
+    std::cout << i << ":" << world[0].GetOutput(i) << "  ";
+  }
+
+
 
   return 0;
 }

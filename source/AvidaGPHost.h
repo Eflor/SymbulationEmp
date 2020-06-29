@@ -1,66 +1,16 @@
-#ifndef SYM_ORG_H
-#define SYM_ORG_H
+#ifndef AVIDA_GP_HOST_H
+#define AVIDA_GP_HOST_H
 
-#include "../../Empirical/source/tools/Random.h"
-#include "../../Empirical/source/tools/string_utils.h"
-#include <set>
-#include <iomanip> // setprecision
-#include <sstream> // stringstream
-
-
-class Symbiont {
-private:  
-  double interaction_val; // whether org gives away resources or invest in defense/parasitism
-  double points;
-  std::set<int> res_types; // resource types
+#include "SymWorld.h"
+#include "AvidaGPSymbio.h"
+#include "../../Empirical/source/hardware/AvidaGP.h"
+#include "../../Empirical/source/config/ArgManager.h"
+#include "../../Empirical/source/Evolve/World.h"
+#include <iostream>
+using std::endl; using std::cout;
 
 
-public:
-
-  double burst_timer = 0;
-  Symbiont(double _intval=0.0, double _points = 0.0, std::set<int> _set = std::set<int>())
-    : interaction_val(_intval), points(_points), res_types(_set) {}
-  Symbiont(const Symbiont &) = default;
-  Symbiont(Symbiont &&) = default;
-  
-
-  Symbiont & operator=(const Symbiont &) = default;
-  Symbiont & operator=(Symbiont &&) = default;
-
-  double GetIntVal() const {return interaction_val;}
-  double GetPoints() {return points;}
-  //  std::set<int> GetResTypes() const {return res_types;}
-  double GetBurstTimer() {return burst_timer;}
-
-  void SetIntVal(double _in) { interaction_val = _in;}
-  void SetPoints(double _in) { points = _in;}
-  void AddPoints(double _in) { points += _in;}
-  //void SetResTypes(std::set<int> _in) {res_types = _in;}
-  void IncBurstTimer(emp::Random &random) {burst_timer += random.GetRandNormal(1.0, 0.5);}
-
-  //TODO: change everything to camel case. 
-  void mutate(emp::Random &random, double mut_rate){
-    interaction_val += random.GetRandNormal(0.0, mut_rate);
-    if(interaction_val < -1) interaction_val = -1;
-    else if (interaction_val > 1) interaction_val = 1;
-  }
-
-};
-
-std::string PrintSym(Symbiont  org){
-  if (org.GetPoints() < 0) return "-";
-  double out_val = org.GetIntVal();  
-  
-  // this prints the symbiont with two decimal places for easier reading
-  std::stringstream temp;
-  temp << std::fixed << std::setprecision(2) << out_val;
-  std::string formattedstring = temp.str();
-  return formattedstring;
-  
-  // return emp::to_string(out_val);  // creates a string without specifying format
-}//Symbiont
-
-class Host {
+class Host: public emp::AvidaCPU_Base<Host>{
 private:
   double interaction_val;
   emp::vector<Symbiont> syms;
@@ -119,7 +69,7 @@ public:
     if(syms.empty()) {
 
       if(hostIntVal >= 0){
-	double spent = resources * hostIntVal;
+	      double spent = resources * hostIntVal;
         this->AddPoints(resources - spent);
       }
       else {
@@ -143,6 +93,7 @@ public:
       double bonus = synergy; 
 
   
+
       if (hostIntVal >= 0 && symIntVal >= 0)  {  
         hostDonation = sym_piece * hostIntVal;
         hostPortion = sym_piece - hostDonation;  
@@ -213,6 +164,6 @@ public:
     DistribResources(resources_per_host_per_update, synergy); 
   }
   
-};//Host
+};
 
 #endif
