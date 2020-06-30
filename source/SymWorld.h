@@ -5,6 +5,7 @@
 #include "../../Empirical/source/data/DataFile.h"
 #include "../../Empirical/source/tools/random_utils.h"
 #include "../../Empirical/source/tools/Random.h"
+#include "../../Empirical/source/base/Ptr.h"
 //#include "SymOrg.h"
 #include "AvidaGPHost.h"
 #include "AvidaGPSymbio.h"

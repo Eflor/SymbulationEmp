@@ -1,5 +1,5 @@
 # Project-specific settings
-PROJECT := symbulation
+PROJECT := AvidaSymGP
 TEST_MAIN := source/catch/main
 EMP_DIR := ../Empirical/source
 
