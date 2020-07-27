@@ -1,14 +1,15 @@
 #ifndef AVIDA_GP_SYMBIO_H
 #define AVIDA_GP_SYMBIO_H
 
-//#include "SymWorld.h"
-//#include "../SymOrg.h"
 #include "../../Empirical/source/hardware/AvidaGP.h"
 #include "../../Empirical/source/config/ArgManager.h"
 #include "../../Empirical/source/Evolve/World.h"
 #include <iostream>
 using std::endl; using std::cout;
 
+/*
+* Class represents a single symbiont that inherits from AvidaCPU_base class 
+*/
 class Symbiont : public emp::AvidaCPU_Base<Symbiont> {
  public:
   using base_t = AvidaCPU_Base<Symbiont>;
